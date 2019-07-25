@@ -30,8 +30,6 @@ def selectEvents( tree, AngularVars, isSignal, costhl, costhh, ncosth ):
   nFiducial = 0
   nPassed = {}
   rPassed = {}
-  cutValues = numpy.arange( 0.2, 1, 0.05 )
-  backgroundScale = 40./28.705
   
   costhetaCuts = numpy.linspace( costhl, costhh, ncosth )
   
@@ -48,23 +46,18 @@ def selectEvents( tree, AngularVars, isSignal, costhl, costhh, ncosth ):
     
     for var in AngularVars:
       
-      leaf = eval('i.%s[0]' % var)
+      p = eval( 'i.%sP[0]' % var )
+      leaf = eval( 'i.%sAngle[0]' % var )
       costheta = math.cos( leaf )
       
       for costhetaCut in costhetaCuts:
-        if costheta < costhetaCut: continue
+        if p == 0. or costheta < costhetaCut: continue
         nPassed[var][costhetaCut] += 1
 
   for var in AngularVars:
     for costhetaCut in costhetaCuts:
       rPassed[var][costhetaCut] = float(nPassed[var][costhetaCut])/float(nFiducial)
-      # print nPassed[var][costhetaCut], nFiducial
-
-  # if not isSignal:
-  #   nFiducial *= backgroundScale
-  #   for costheta in nPassed.values():
-  #     for passed in costheta.values():
-  #       passed *= backgroundScale
+      print nPassed[var][costhetaCut], nFiducial
 
   return n, nFiducial, nPassed, rPassed
 # def selectEvents()
@@ -72,7 +65,7 @@ def selectEvents( tree, AngularVars, isSignal, costhl, costhh, ncosth ):
 def optimizeSelection( mass, gamma, AngularVars, nPassed, rPassed ):
 
   E = mass * gamma
-  if E == 25. or E == 50.: Eround = int(E)
+  if E in [ 11., 22., 25., 44., 50. ]: Eround = int(E)
   else: Eround = E
   sKey = 'e%s_m%s' %( Eround, mass )
   # Scale the background events to 40kton*10 year exposure
@@ -100,9 +93,9 @@ def optimizeSelection( mass, gamma, AngularVars, nPassed, rPassed ):
 
 if __name__ == "__main__":
  
-  AngularVars = [ 'VisibleAngle', 'VisibleNoNAngle', 'LeadingParticleAngle', 'LeadingParticleNoNAngle',
-                  'SmearedReconstructableAngle', 'SmearedReconstructableNoNAngle',
-                  'LeadingSmearedReconstructableAngle', 'LeadingSmearedReconstructableNoNAngle' ]
+  AngularVars = [ 'Visible', 'VisibleNoN', 'LeadingParticle', 'LeadingParticleNoN',
+                  'SmearedReconstructable', 'SmearedReconstructableNoN',
+                  'LeadingSmearedReconstructable', 'LeadingSmearedReconstructableNoN' ]
 
   parser = argparse.ArgumentParser( description = 'Optimize the selection.')
   parser.add_argument( '-s', dest = 'sDir', type = str, help = 'The directory of the input SIGNAL files.' )
@@ -112,15 +105,15 @@ if __name__ == "__main__":
   args = parser.parse_args()
 
   Masses     = [ 5, 10, 20, 40 ]
-  Gammas     = [ 1.25, 2, 10 ]
+  Gammas     = [ 1.1, 1.25, 2, 10 ]
   hDict      = {}
   nTotal     = {}
   nFiducial  = {}
   nPassed    = {}
   passRate   = {}
   costhl     = 0.2
-  costhh     = 1.
-  ncosth     = 17
+  costhh     = 0.95
+  ncosth     = 16
   bestCut    = {}
   bestEff    = {}
   bestBkg    = {}
@@ -147,7 +140,7 @@ if __name__ == "__main__":
         continue
       
       E = Mass * Gamma
-      if E == 25. or E == 50.: Eround = int(E)
+      if E in [ 11., 22., 25., 44., 50. ]: Eround = int(E)
       else: Eround = E
       sFile = [ '%s/dune_scalar_e%s_m%s_g1_z1.0_Gen_g4_RecoSmear_ana.root' %( args.sDir, str(Eround), str(Mass) ) ]
       sKey = 'e%s_m%s' %( Eround, Mass )
