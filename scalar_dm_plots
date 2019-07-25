@@ -42,44 +42,27 @@ for key,f in sdfile.iteritems():
 
 signal_eff = {}
 signal_eff_non = {}
-bkg_evts = 0.
-bkg_evts_non = 0.
+bkg_evts = {}
+bkg_evts_non = {}
 # Read in the results from Yun-Tse
-with open('EfficiencyExperimental.txt','r') as f:
+with open('1D_Efficiency_scalar.txt','r') as f:
     E = 0
     m = 0
-    read_sig = False
-    read_bkg = False
     for rawline in f:
         line = rawline.split()
-        # Is it the beginning of a signal section?
-        if line[0] == 'Sample:' and line[1] != 'atmos,':
-            E = line[1].split('_')[0]
-            E = E.split('e')[1]
-            E = float(E)
-            m = line[1].split('_')[1]
-            m = m.split('m')[1]
-            m = m.split(',')[0]
-            m = float(m)
-            read_sig = True
+        # Is it the beginning of a model point?
+        if line[0] == 'Mass':
+            E = float(line[6])
+            m = float(line[2])
             print m,E
-        # Is it the beginning of a background section?
-        if line[0] == 'Sample:' and line[1] == 'atmos,':
-            read_bkg = True
-        # If we're in a signal section, read the right variable
-        if line[0] == 'SmearedReconstructableAngle:' and read_sig:
-            signal_eff[E,m] = float(line[2].split('(')[1].split(')')[0])
+        # If we're in a model point, read the right variable
+        if line[0] == 'SmearedReconstructable:':
+            signal_eff[E,m] = float(line[8].replace(',',''))
+            bkg_evts[E,m] = float(line[12].replace(',',''))
         # Same, but for no neutron efficiency.  Once we've read this, we're done with this signal section.
-        if line[0] == 'SmearedReconstructableNoNAngle:' and read_sig:
-            signal_eff_non[E,m] = float(line[2].split('(')[1].split(')')[0])
-            read_sig = False
-        # Same, but for background
-        if line[0] == 'SmearedReconstructableAngle:' and read_bkg:
-            bkg_evts = float(line[1])
-        # Once we've read this, we're done with the background.
-        if line[0] == 'SmearedReconstructableNoNAngle:' and read_bkg:
-            bkg_evts_non = float(line[1])            
-            read_bkg = False
+        if line[0] == 'SmearedReconstructableNoN:':
+            signal_eff_non[E,m] = float(line[8].replace(',',''))
+            bkg_evts_non[E,m] = float(line[12].replace(',',''))
 
 # Number of target Argon nuclei and livetime of DUNE
 NA_dune = 4 * 1.5e32             # 40 kton
@@ -124,8 +107,10 @@ with open('results_nontherm_ss.dat','r') as f:
         dd_n_A = float(line[4]) * float(line[6])
         dd_n_B = (1.0 - float(line[4])) * float(line[8])
         # Approximate 5 sigma sensitivity: solve sensitivity, which is hopefully in some reasonable range (last 2 arguments)
-        dune_limit_s = brentq(lambda s : 2.0 * ((s + bkg_evts) * np.log(1.0 + s / bkg_evts) - s) - 25.0, np.sqrt(bkg_evts) / 10.0, np.sqrt(bkg_evts) * 10.0)
-        dune_limit_non_s = brentq(lambda s : 2.0 * ((s + bkg_evts_non) * np.log(1.0 + s / bkg_evts_non) - s) - 25.0, np.sqrt(bkg_evts_non) / 10.0, np.sqrt(bkg_evts_non) * 10.0)
+        b = bkg_evts[MA,MB]
+        dune_limit_s = brentq(lambda s : 2.0 * ((s + b) * np.log(1.0 + s / b) - s) - 25.0, np.sqrt(b) / 10.0, np.sqrt(b) * 10.0)
+        b = bkg_evts_non[MA,MB]
+        dune_limit_non_s = brentq(lambda s : 2.0 * ((s + b) * np.log(1.0 + s / b) - s) - 25.0, np.sqrt(b) / 10.0, np.sqrt(b) * 10.0)
         # Take my word for it...
         sk_limit_s = 14.49
         try:
@@ -167,6 +152,6 @@ for gam in MBv:
     plt.ylabel(r'$\sigma_{\psi,\textrm{DD}}~(\textrm{cm}^2)$')
     plt.title(r'$\gamma = ' + str(gam) + '$')
     plt.legend()
-    plt.savefig('/Users/yuntse/Documents/Phenomenology/BoostedDM/Plots/dune_v07_06_01/sensitivity/20190725_1D/scalar_g' + str(gam).replace('.','p') + '.pdf')
+    plt.savefig('/home/jberger/Desktop/scalar_g' + str(gam).replace('.','p') + '.pdf')
     plt.clf()
     plt.cla()
