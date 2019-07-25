@@ -1,0 +1,172 @@
+#!/usr/bin/env python
+
+# For plotting
+import matplotlib.pyplot as plt
+
+# To solve for cross-section limit
+from scipy.optimize import brentq
+
+# To interpolate the DD limits to our benchmarks
+from scipy.interpolate import interp1d
+
+# To read XML DD limits
+import xml.etree.ElementTree as ET
+
+# To read the XML limits in a compatible format
+from io import StringIO
+
+import numpy as np
+
+sdfile = {'p' : 'SD-p-2019.xml', 'n' : 'SD-n-2019.xml'}
+sdlim = {}
+for key,f in sdfile.iteritems():
+    # For each DD limit file, parse the XML
+    tree = ET.parse(f)
+    root = tree.getroot()
+    for child in root:
+        # Find the actual data
+        if child.tag != 'data-values':
+            continue
+        # Clean up the data
+        cleantxt = child.text.replace('[','').replace('{','').replace(']','').replace('}','').replace(';',' ')
+        # Load into numpy array
+        data = np.genfromtxt(StringIO(unicode(cleantxt)))
+        # Store the results
+        xv = data[::2]
+        yv = data[1::2]
+        if len(xv) != len(yv):
+            raise ValueError('Illegal limit xml file provided')
+        # Interpolate and store the limits for the given nucleon type
+        sdlim[key] = interp1d(xv,yv)
+        break
+
+signal_eff = {}
+signal_eff_non = {}
+bkg_evts = 0.
+bkg_evts_non = 0.
+# Read in the results from Yun-Tse
+with open('EfficiencyExperimental.txt','r') as f:
+    E = 0
+    m = 0
+    read_sig = False
+    read_bkg = False
+    for rawline in f:
+        line = rawline.split()
+        # Is it the beginning of a signal section?
+        if line[0] == 'Sample:' and line[1] != 'atmos,':
+            E = line[1].split('_')[0]
+            E = E.split('e')[1]
+            E = float(E)
+            m = line[1].split('_')[1]
+            m = m.split('m')[1]
+            m = m.split(',')[0]
+            m = float(m)
+            read_sig = True
+            print m,E
+        # Is it the beginning of a background section?
+        if line[0] == 'Sample:' and line[1] == 'atmos,':
+            read_bkg = True
+        # If we're in a signal section, read the right variable
+        if line[0] == 'SmearedReconstructableAngle:' and read_sig:
+            signal_eff[E,m] = float(line[2].split('(')[1].split(')')[0])
+        # Same, but for no neutron efficiency.  Once we've read this, we're done with this signal section.
+        if line[0] == 'SmearedReconstructableNoNAngle:' and read_sig:
+            signal_eff_non[E,m] = float(line[2].split('(')[1].split(')')[0])
+            read_sig = False
+        # Same, but for background
+        if line[0] == 'SmearedReconstructableAngle:' and read_bkg:
+            bkg_evts = float(line[1])
+        # Once we've read this, we're done with the background.
+        if line[0] == 'SmearedReconstructableNoNAngle:' and read_bkg:
+            bkg_evts_non = float(line[1])            
+            read_bkg = False
+
+# Number of target Argon nuclei and livetime of DUNE
+NA_dune = 4 * 1.5e32             # 40 kton
+livetime_dune = 10.0 * 3.154e7   # 10 years
+# Same for Super-K from 2009 search
+NA_sk = 7.46871827e32
+livetime_sk = 197432640.0
+MBv = {}
+DLv = {}
+DLnnv = {}
+SKv = {}
+SKav = {}
+DDnv = {}
+DDpv = {}
+with open('results_nontherm_ss.dat','r') as f:
+    for rawline in f:
+        # Ignore comments
+        if rawline[0] == '#':
+            continue
+        line = rawline.split()
+        # 3rd column = gamma
+        gam = float(line[2])
+        # Skip gamma = 2, no longer using this benchmark
+        if gam == 2.0:
+            continue
+        # 2nd column is the lighter DM mass
+        MB = float(line[1])
+        # Heavy DM mass = Lighter DM mass * gamma
+        MA = float(line[2]) * MB
+        # 4th column is the charge of the heavier DM
+        QA = float(line[3])
+        # 5th column is the fraction of DM made up of heavier DM
+        Afrac = float(line[4])
+        # Signal rate at g_Z' = 1: Number of target nuclei * livetime * flux * cross-section on Argon * efficiency
+        dune_signal = NA_dune * livetime_dune * float(line[9]) * float(line[10]) * signal_eff[MA,MB]
+        dune_signal_non = NA_dune * livetime_dune * float(line[9]) * float(line[10]) * signal_eff_non[MA,MB]
+        # Signal rate for SK, but we need to combine the oxygen and 2 hydrogens in the water        
+        sk_signal = NA_sk * livetime_sk * float(line[9]) * (float(line[12]) * float(line[13]) * 2 + float(line[14]) * float(line[15]))
+        # Expected DD rates at gamma = 1: fraction of A/B * cross-section for A/B on p/n
+        dd_p_A = float(line[4]) * float(line[5])
+        dd_p_B = (1.0 - float(line[4])) * float(line[7])
+        dd_n_A = float(line[4]) * float(line[6])
+        dd_n_B = (1.0 - float(line[4])) * float(line[8])
+        # Approximate 5 sigma sensitivity: solve sensitivity, which is hopefully in some reasonable range (last 2 arguments)
+        dune_limit_s = brentq(lambda s : 2.0 * ((s + bkg_evts) * np.log(1.0 + s / bkg_evts) - s) - 25.0, np.sqrt(bkg_evts) / 10.0, np.sqrt(bkg_evts) * 10.0)
+        dune_limit_non_s = brentq(lambda s : 2.0 * ((s + bkg_evts_non) * np.log(1.0 + s / bkg_evts_non) - s) - 25.0, np.sqrt(bkg_evts_non) / 10.0, np.sqrt(bkg_evts_non) * 10.0)
+        # Take my word for it...
+        sk_limit_s = 14.49
+        try:
+            print MBv[gam]
+        except KeyError:
+            MBv[gam] = []
+            DLv[gam] = []
+            DLnnv[gam] = []
+            SKv[gam] = []
+            SKav[gam] = []
+            DDnv[gam] = []
+            DDpv[gam] = []
+        # Store the 4 mass benchmarks and corresponding curves for each gamma
+        MBv[gam] += [MB]
+        DLv[gam] += [np.sqrt(dune_limit_s / dune_signal) * dd_p_A]
+        DLnnv[gam] += [np.sqrt(dune_limit_non_s / dune_signal_non) * dd_p_A]
+        try:
+            SKv[gam] += [np.sqrt(sk_limit_s / sk_signal) * dd_p_A]
+            SKav[gam] += [np.sqrt(10.0 * sk_limit_s / sk_signal) * dd_p_A]
+        except ZeroDivisionError:
+            SKv[gam] += [10.0]
+            SKav[gam] += [10.0]
+        DDnv[gam] += [sdlim['n'](MA) / dd_n_A * dd_p_A ]
+        DDpv[gam] += [sdlim['p'](MA)]
+
+# Plot the results
+plt.rc('text', usetex=True)
+for gam in MBv:
+    plt.plot(MBv[gam], DLv[gam], '--', label=r'$\textrm{DUNE}$', color='C0')
+    plt.plot(MBv[gam], DLnnv[gam], label=r'$\textrm{DUNE (no n)}$', color='C0')
+    plt.plot(MBv[gam], SKv[gam], '--', label=r'$\textrm{Super-K}$', color='C1')
+    plt.fill_between(MBv[gam], SKav[gam], 1.0, label=r'$\textrm{Super-K conservative}$', color='C1', alpha=0.2)
+    plt.fill_between(MBv[gam], DDnv[gam], 1.0, label=r'$\textrm{PandaX, n}$', color='C2', alpha=0.2)
+    plt.fill_between(MBv[gam], DDpv[gam], 1.0, label=r'$\textrm{PICO-60L, p}$', color='C3', alpha=0.2)
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.axis([5.0,40.0,2.0e-42,1.0e-39])
+    plt.xlabel(r'$m_\chi~(\textrm{GeV})$')
+    plt.ylabel(r'$\sigma_{\psi,\textrm{DD}}~(\textrm{cm}^2)$')
+    plt.title(r'$\gamma = ' + str(gam) + '$')
+    plt.legend()
+    plt.savefig('/Users/yuntse/Documents/Phenomenology/BoostedDM/Plots/dune_v07_06_01/sensitivity/20190725_1D/scalar_g' + str(gam).replace('.','p') + '.pdf')
+    plt.clf()
+    plt.cla()
