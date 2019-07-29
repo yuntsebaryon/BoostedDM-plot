@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<limit>
+  <data-comment>spin-dependent neutron cross section</data-comment>
+  <data-label>PandaX-II 3.3E4 kg-day SD neutron limits</data-label>
+  <data-reference>Phys. Rev. Lett. 118, 071301 (2017), arXiv:1611.06553v3</data-reference>
+  <data-values>{[3.35 2.175e-34;3.55 4.63971e-35;3.98107 3.32024e-36;5.01187 1.28872e-37;6.30957 1.2804e-38;7.94328 2.20327e-39;10 6.01318e-40;12.5893 2.37268e-40;15.8489 1.16482e-40;19.9526 7.0466e-41;25.1189 5.04019e-41;31.6228 4.46515e-41;39.8107 4.07835e-41;50.1187 4.12246e-41;63.0957 4.66244e-41;79.4328 5.47479e-41;100 6.29055e-41;125.893 7.33429e-41;158.489 8.79769e-41;199.526 1.08763e-40;251.189 1.36096e-40;316.228 1.64938e-40;398.107 2.04216e-40;501.187 2.5903e-40;630.957 3.28037e-40;794.328 4.32922e-40;1000 5.72364e-40]}
+</data-values>
+  <date-of-announcement type="date">2016-11-20</date-of-announcement>
+  <date-of-run-end type="date" nil="true"></date-of-run-end>
+  <date-of-run-start type="date" nil="true"></date-of-run-start>
+  <default-color>Blk</default-color>
+  <default-style>Line</default-style>
+  <experiment>PandaX</experiment>
+  <measurement-type>Dir</measurement-type>
+  <nomhash type="yaml">--- 
+yangyong: false
+mahao: true
+</nomhash>
+  <public type="boolean">true</public>
+  <result-type>Exp</result-type>
+  <spin-dependency>SD</spin-dependency>
+  <x-rescale>1</x-rescale>
+  <x-units>GeV</x-units>
+  <y-rescale>1</y-rescale>
+  <y-units>cm^2</y-units>
+  <year type="integer">2016</year>
+</limit>
