@@ -61,6 +61,7 @@ def selectEvents( tree, Vars, pl, ph, np, costhll, costhlh, ncosthl, costhhl, co
       p = eval( 'i.%sP[0]' % var )
       leaf = eval( 'i.%sAngle[0]' % var )
       costheta = math.cos( leaf )
+      if p == 0.: continue
       
       for costhlCut in costhlCuts:
         for costhhCut in costhhCuts:
