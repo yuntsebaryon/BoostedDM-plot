@@ -201,12 +201,13 @@ with open('results_nontherm_ss.dat','r') as f:
 # Plot the results
 plt.rc('text', usetex=True)
 for gam in MBv:
-    plt.plot(MBv[gam], DLv[gam], '--', label=r'$\textrm{DUNE}$', color='C0')
-    plt.plot(MBv[gam], DLnnv[gam], label=r'$\textrm{DUNE (no n)}$', color='C0')
+
     if args.noThreshold:
         plt.plot(MBv[gam], DLv_nothr[gam], '--', label=r'$\textrm{DUNE (no thre)}$', color='C4')
         plt.plot(MBv[gam], DLnnv_nothr[gam], label=r'$\textrm{DUNE (no n, no thre)}$', color='C4')
-      
+
+    plt.plot(MBv[gam], DLv[gam], '--', label=r'$\textrm{DUNE}$', color='C0')
+    plt.plot(MBv[gam], DLnnv[gam], label=r'$\textrm{DUNE (no n)}$', color='C0')
     plt.plot(MBv[gam], SKv[gam], '--', label=r'$\textrm{Super-K}$', color='C1')
     plt.fill_between(MBv[gam], SKav[gam], 1.0, label=r'$\textrm{Super-K conservative}$', color='C1', alpha=0.2)
     plt.fill_between(MBv[gam], DDnv[gam], 1.0, label=r'$\textrm{PandaX, n}$', color='C2', alpha=0.2)
@@ -214,6 +215,10 @@ for gam in MBv:
     plt.xscale('log')
     plt.yscale('log')
     plt.axis([5.0,40.0,2.0e-42,1.0e-39])
+    
+    if args.noThreshold:
+        plt.axis([5.0,40.0,2.0e-43,1.0e-39])
+    
     plt.xlabel(r'$m_\chi~(\textrm{GeV})$')
     plt.ylabel(r'$\sigma_{\psi,\textrm{DD}}~(\textrm{cm}^2)$')
     plt.title(r'$\gamma = ' + str(gam) + '$')
