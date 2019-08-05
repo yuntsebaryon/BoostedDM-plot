@@ -91,14 +91,14 @@ def selectEvents( tree, Vars, pl, ph, np, costhll, costhlh, ncosthl, costhhl, co
   return n, nFiducial, nPassed, rPassed
 # def selectEvents()
 
-def optimizeSelection( mass, gamma, Vars, nPassed, rPassed ):
+def optimizeSelection( mass, gamma, Vars, bgScale, nPassed, rPassed ):
 
   E = mass * gamma
   if E in [ 11., 22., 25., 44., 50. ]: Eround = int(E)
   else: Eround = E
   sKey = 'e%s_m%s' %( Eround, mass )
   # Scale the background events to 40kton*10 year exposure
-  backgroundScale = 40./28.705
+  backgroundScale = bgScale* 40./28.705
   bestCut = {}
   bestEff = {}
   bestBkg = {}
@@ -122,13 +122,16 @@ def optimizeSelection( mass, gamma, Vars, nPassed, rPassed ):
 
 if __name__ == "__main__":
  
-  Vars = [ 'Visible', 'VisibleNoN', 'SmearedReconstructable', 'SmearedReconstructableNoN' ]
+  Vars = [ 'Visible', 'VisibleNoN', 'SmearedReconstructable', 'SmearedReconstructableNoN',
+           'SmearedVisible', 'SmearedVisibleNon' ]
 
   parser = argparse.ArgumentParser( description = 'Optimize the selection.')
   parser.add_argument( '-s', dest = 'sDir', type = str, help = 'The directory of the input SIGNAL files.' )
   parser.add_argument( '-b', dest = 'bDir', type = str, help = 'The directory of the input BACKGROUND files.' )
   parser.add_argument( '-o', dest = 'oDir', type = str, help = 'The directory of the output plots.' )
-  
+  parser.add_argument( '-m', dest = 'bgScale', type = float, default = 1., 
+                      help = 'The scale factor on the background events to account for additional background source.' )
+
   args = parser.parse_args()
 
   Masses     = [ 5, 10, 20, 40 ]
@@ -156,12 +159,12 @@ if __name__ == "__main__":
   createDir( args.oDir )
   
   # Create the output text file
-  txtName = '%s/Efficiency.txt' % ( args.oDir )
+  txtName = '%s/2D_Efficiency_p0.1-1_scalar_bgScale%f.txt' % ( args.oDir, args.bgScale )
   txtFile = open( txtName, 'w' )
     
 
   # Background
-  bFile = [ '%s/prodgenie_atmnu_max_dune10kt_gen_g4_NCFilter_RecoSmear_ana.root' % args.bDir, '%s/prodgenie_atmnu_min_dune10kt_gen_g4_NCFilter_RecoSmear_ana.root' % args.bDir ]
+  bFile = [ '%s/prodgenie_atmnu_max_dune10kt_gen_g4_NCFilter_reco_ana.root' % args.bDir, '%s/prodgenie_atmnu_min_dune10kt_gen_g4_NCFilter_reco_ana.root' % args.bDir ]
   bTree = getTree( bFile, 'MCParticles' )
   nTotal['atmos'], nFiducial['atmos'], nPassed['atmos'], passRate['atmos'] = selectEvents( bTree, Vars, pl, ph, np, costhll, costhlh, ncosthl, costhhl, costhhh, ncosthh )
 
@@ -175,12 +178,12 @@ if __name__ == "__main__":
       E = Mass * Gamma
       if E in [ 11., 22., 25., 44., 50. ]: Eround = int(E)
       else: Eround = E
-      sFile = [ '%s/dune_scalar_e%s_m%s_g1_z1.0_Gen_g4_RecoSmear_ana.root' %( args.sDir, str(Eround), str(Mass) ) ]
+      sFile = [ '%s/dune_scalar_e%s_m%s_g1_z1.0_Gen_g4_reco_ana.root' %( args.sDir, str(Eround), str(Mass) ) ]
       sKey = 'e%s_m%s' %( Eround, Mass )
       sTree = getTree( sFile, 'MCParticles' )
       nTotal[sKey], nFiducial[sKey], nPassed[sKey], passRate[sKey] = selectEvents( sTree, Vars, pl, ph, np, costhll, costhlh, ncosthl, costhhl, costhhh, ncosthh )
       # optimize the selection
-      bestCut[sKey], bestEff[sKey], bestBkg[sKey], bestBkgErr[sKey] = optimizeSelection( Mass, Gamma, Vars, nPassed, passRate )
+      bestCut[sKey], bestEff[sKey], bestBkg[sKey], bestBkgErr[sKey] = optimizeSelection( Mass, Gamma, Vars, args.bgScale, nPassed, passRate )
       txtFile.write('Mass = %s GeV, E = %s GeV\n' % ( str(Mass), str(Eround) ) )
       
       for var in Vars:
