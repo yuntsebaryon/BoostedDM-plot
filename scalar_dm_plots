@@ -17,6 +17,26 @@ from io import StringIO
 
 import numpy as np
 
+import os
+import argparse
+
+parser = argparse.ArgumentParser( description = 'Calculate the sensitivity of the BDM search and compare with other experiments.' )
+parser.add_argument( '-i', dest = 'inFile', type = str, help = 'input file with the signal selection efficiency and expected background.' )
+parser.add_argument( '-o', dest = 'outDir', type = str, help = 'output directory of the plots.' )
+parser.add_argument( '-t', dest = 'isTruth', type = bool, default = False, help = 'specify whether to calculate the sensitivity with the truth quantities.  Default False.' )
+parser.add_argument( '-u', dest = 'noThreshold', type = bool, default = False, help = 'do include the limit with the no detection threshold assumption.' ) 
+  
+args = parser.parse_args()
+
+if args.isTruth:
+  print 'Evaluate the sensitivity with the truth quantities...'
+
+if not os.path.exists( args.outDir ):
+    os.mkdir( args.outDir )
+    print "   Creating the output directory %s " % args.outDir
+else:
+    print "   The output directory already exists"
+
 sdfile = {'p' : 'SD-p-2019.xml', 'n' : 'SD-n-2019.xml'}
 sdlim = {}
 for key,f in sdfile.iteritems():
@@ -42,10 +62,14 @@ for key,f in sdfile.iteritems():
 
 signal_eff = {}
 signal_eff_non = {}
+signal_eff_nothr = {}
+signal_eff_nothr_non = {}
 bkg_evts = {}
 bkg_evts_non = {}
+bkg_evts_nothr = {}
+bkg_evts_nothr_non = {}
 # Read in the results from Yun-Tse
-with open('1D_Efficiency_scalar.txt','r') as f:
+with open( args.inFile, 'r') as f:
     E = 0
     m = 0
     for rawline in f:
@@ -56,13 +80,28 @@ with open('1D_Efficiency_scalar.txt','r') as f:
             m = float(line[2])
             print m,E
         # If we're in a model point, read the right variable
-        if line[0] == 'SmearedReconstructable:':
+        Variable = 'SmearedReconstructable:'
+        VariableNoN = 'SmearedReconstructableNoN:'
+        if args.isTruth:
+            Variable = 'Visible:'
+            VariableNoN = 'VisibleNoN:'
+        
+        if line[0] == Variable:
             signal_eff[E,m] = float(line[8].replace(',',''))
             bkg_evts[E,m] = float(line[12].replace(',',''))
+
         # Same, but for no neutron efficiency.  Once we've read this, we're done with this signal section.
-        if line[0] == 'SmearedReconstructableNoN:':
+        if line[0] == VariableNoN:
             signal_eff_non[E,m] = float(line[8].replace(',',''))
             bkg_evts_non[E,m] = float(line[12].replace(',',''))
+
+        if args.noThreshold:
+            if line[0] == 'SmearedVisible:':
+                signal_eff_nothr[E,m] = float(line[8].replace(',',''))
+                bkg_evts_nothr[E,m] = float(line[12].replace(',',''))
+            if line[0] == 'SmearedVisibleNon:':
+                signal_eff_nothr_non[E,m] = float(line[8].replace(',',''))
+                bkg_evts_nothr_non[E,m] = float(line[8].replace(',',''))
 
 # Number of target Argon nuclei and livetime of DUNE
 NA_dune = 4 * 1.5e32             # 40 kton
@@ -73,6 +112,8 @@ livetime_sk = 197432640.0
 MBv = {}
 DLv = {}
 DLnnv = {}
+DLv_nothr = {}
+DLnnv_nothr = {}
 SKv = {}
 SKav = {}
 DDnv = {}
@@ -99,6 +140,13 @@ with open('results_nontherm_ss.dat','r') as f:
         # Signal rate at g_Z' = 1: Number of target nuclei * livetime * flux * cross-section on Argon * efficiency
         dune_signal = NA_dune * livetime_dune * float(line[9]) * float(line[10]) * signal_eff[MA,MB]
         dune_signal_non = NA_dune * livetime_dune * float(line[9]) * float(line[10]) * signal_eff_non[MA,MB]
+        
+        dune_signal_nothr = 0.
+        dune_signal_nothr_non = 0.
+        if args.noThreshold:
+            dune_signal_nothr = NA_dune * livetime_dune * float(line[9]) * float(line[10]) * signal_eff_nothr[MA,MB]
+            dune_signal_nothr_non = NA_dune * livetime_dune * float(line[9]) * float(line[10]) * signal_eff_nothr_non[MA,MB]
+      
         # Signal rate for SK, but we need to combine the oxygen and 2 hydrogens in the water        
         sk_signal = NA_sk * livetime_sk * float(line[9]) * (float(line[12]) * float(line[13]) * 2 + float(line[14]) * float(line[15]))
         # Expected DD rates at gamma = 1: fraction of A/B * cross-section for A/B on p/n
@@ -111,6 +159,15 @@ with open('results_nontherm_ss.dat','r') as f:
         dune_limit_s = brentq(lambda s : 2.0 * ((s + b) * np.log(1.0 + s / b) - s) - 25.0, np.sqrt(b) / 10.0, np.sqrt(b) * 10.0)
         b = bkg_evts_non[MA,MB]
         dune_limit_non_s = brentq(lambda s : 2.0 * ((s + b) * np.log(1.0 + s / b) - s) - 25.0, np.sqrt(b) / 10.0, np.sqrt(b) * 10.0)
+
+        dune_limit_s_nothr = 0.
+        dune_limit_non_s_nothr = 0.
+        if args.noThreshold:
+            b = bkg_evts_nothr[MA,MB]
+            dune_limit_s_nothr = brentq(lambda s : 2.0 * ((s + b) * np.log(1.0 + s / b) - s) - 25.0, np.sqrt(b) / 10.0, np.sqrt(b) * 10.0)
+            b = bkg_evts_nothr_non[MA,MB]
+            dune_limit_non_s_nothr = brentq(lambda s : 2.0 * ((s + b) * np.log(1.0 + s / b) - s) - 25.0, np.sqrt(b) / 10.0, np.sqrt(b) * 10.0)
+        
         # Take my word for it...
         sk_limit_s = 14.49
         try:
@@ -119,6 +176,8 @@ with open('results_nontherm_ss.dat','r') as f:
             MBv[gam] = []
             DLv[gam] = []
             DLnnv[gam] = []
+            DLv_nothr[gam] = []
+            DLnnv_nothr[gam] = []
             SKv[gam] = []
             SKav[gam] = []
             DDnv[gam] = []
@@ -127,6 +186,9 @@ with open('results_nontherm_ss.dat','r') as f:
         MBv[gam] += [MB]
         DLv[gam] += [np.sqrt(dune_limit_s / dune_signal) * dd_p_A]
         DLnnv[gam] += [np.sqrt(dune_limit_non_s / dune_signal_non) * dd_p_A]
+        if args.noThreshold:
+            DLv_nothr[gam] += [np.sqrt(dune_limit_s_nothr / dune_signal_nothr) * dd_p_A]
+            DLnnv_nothr[gam] += [np.sqrt(dune_limit_non_s_nothr / dune_signal_nothr_non) * dd_p_A]
         try:
             SKv[gam] += [np.sqrt(sk_limit_s / sk_signal) * dd_p_A]
             SKav[gam] += [np.sqrt(10.0 * sk_limit_s / sk_signal) * dd_p_A]
@@ -141,6 +203,10 @@ plt.rc('text', usetex=True)
 for gam in MBv:
     plt.plot(MBv[gam], DLv[gam], '--', label=r'$\textrm{DUNE}$', color='C0')
     plt.plot(MBv[gam], DLnnv[gam], label=r'$\textrm{DUNE (no n)}$', color='C0')
+    if args.noThreshold:
+        plt.plot(MBv[gam], DLv_nothr[gam], '--', label=r'$\textrm{DUNE (no thre)}$', color='C4')
+        plt.plot(MBv[gam], DLnnv_nothr[gam], label=r'$\textrm{DUNE (no n, no thre)}$', color='C4')
+      
     plt.plot(MBv[gam], SKv[gam], '--', label=r'$\textrm{Super-K}$', color='C1')
     plt.fill_between(MBv[gam], SKav[gam], 1.0, label=r'$\textrm{Super-K conservative}$', color='C1', alpha=0.2)
     plt.fill_between(MBv[gam], DDnv[gam], 1.0, label=r'$\textrm{PandaX, n}$', color='C2', alpha=0.2)
@@ -152,6 +218,6 @@ for gam in MBv:
     plt.ylabel(r'$\sigma_{\psi,\textrm{DD}}~(\textrm{cm}^2)$')
     plt.title(r'$\gamma = ' + str(gam) + '$')
     plt.legend()
-    plt.savefig('/home/jberger/Desktop/scalar_g' + str(gam).replace('.','p') + '.pdf')
+    plt.savefig( args.outDir + '/scalar_g' + str(gam).replace('.','p') + '.pdf')
     plt.clf()
     plt.cla()
