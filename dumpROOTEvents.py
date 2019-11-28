@@ -48,7 +48,8 @@ if __name__ == "__main__":
 
 
   Vars = [ 'SmearedReconstructableAngle', 'SmearedReconstructableNoNAngle' ]
-           
+  # Vars = [ 'VisibleAngle', 'VisibleNoNAngle' ]
+
   parser = argparse.ArgumentParser( description = 'Make angular distributions.')
   parser.add_argument( '-s', dest = 'sDir', type = str, help = 'The directory of the input SIGNAL files.' )
   parser.add_argument( '-b', dest = 'bDir', type = str, help = 'The directory of the input BACKGROUND files.' )
@@ -57,7 +58,9 @@ if __name__ == "__main__":
 
 
   Masses   = [ 5, 10, 20, 40 ]
-  Gammas   = [ 1.1, 1.25, 10 ]
+  Gammas   = [ 1.1, 1.25, 1.5, 10 ]
+  # Masses = [ 10 ]
+  # Gammas = [ 2 ]
 
   # Background
   bFile = [ '%s/prodgenie_atmnu_max_dune10kt_gen_g4_NCFilter_reco_ana.root' % args.bDir, '%s/prodgenie_atmnu_min_dune10kt_gen_g4_NCFilter_reco_ana.root' % args.bDir ]
@@ -70,15 +73,17 @@ if __name__ == "__main__":
     for Gamma in Gammas:
 
       E = Mass * Gamma
-      if E in [ 11., 22., 25., 44., 50. ]: Eround = int(E)
+      if E in [ 11., 15., 22., 25., 30., 44., 50., 60. ]: Eround = int(E)
       else: Eround = E
-      if E in [ 5.5, 6.25, 12.5 ]:
+      if E in [ 5.5, 6.25, 7.5, 12.5 ]:
         Estr = str(E)
         Estr.replace( '.', 'p' )
       else: Estr = str(Eround)
       sFile = ['%s/dune_scalar_e%s_m%s_g1_z1.0_Gen_g4_reco_ana.root' %( args.sDir, Estr, str(Mass) ) ]
+      # sFile = ['%s/dune_fermion_e%s_m%s_g1_z1_nonuclear.0_Gen_g4_ana.root' %( args.sDir, Estr, str(Mass) ) ]
       sKey = 'e%s_m%s' %( Eround, Mass )
       sTree = getTree( sFile, 'MCParticles' )
       sOut = '%s/dune_scalar_e%s_m%s_g1_z1.0_Gen_g4_reco_ana.dat' % ( args.sDir, Estr, str(Mass) )
+      # sOut = '%s/dune_fermion_e%s_m%s_g1_z1_nonuclear.0_Gen_g4_ana.dat' % ( args.sDir, Estr, str(Mass) )
       print 'M = %d, E = %f' %( Mass, E )
       printEvents( sTree, sOut, Vars )
