@@ -100,7 +100,8 @@ def makeAngularPlot( hADict, Mass, Gammas, var, oDir ):
   c = ROOT.TCanvas( cName , cName, 1600, 1200 )
   c.SetBottomMargin(0.15)
   
-  colors = { '1.1': 906, '1.25': 593, '2': 870, '10': 417, 'atmos': 797 }
+  # colors = { '1.1': 906, '1.25': 593, '2': 870, '10': 417, 'atmos': 797 }
+  colors = { '1.1': 906, '1.25': 593, '1.5': 870, '10': 417, 'atmos': 797 }
   isFirst = True
 
   l = ROOT.TLegend( 0.15, 0.6, 0.55, 0.8 )
@@ -118,7 +119,7 @@ def makeAngularPlot( hADict, Mass, Gammas, var, oDir ):
     if ( gamma == 2 ) and Mass in [ 5, 20, 40 ]:
       continue
     e = gamma*Mass
-    if e in [ 11., 22., 25., 44., 50. ]: eround = int(e)
+    if e in [ 11., 15., 22., 25., 30., 44., 50., 60. ]: eround = int(e)
     else: eround = e
     sKey = 'e%s_m%s' %( eround, Mass )
     h = hADict[sKey][var]
@@ -178,7 +179,7 @@ if __name__ == "__main__":
 
 
   Masses   = [ 5, 10, 20, 40 ]
-  Gammas   = [ 1.1, 1.25, 2, 10 ]
+  Gammas   = [ 1.1, 1.25, 1.5, 10 ]
   hPDict   = {}
   hADict   = {}
   nTotal   = {}
@@ -190,7 +191,7 @@ if __name__ == "__main__":
     os.makedirs( args.oDir )
 
   # Background
-  bFile = [ '%s/prodgenie_atmnu_max_dune10kt_gen_g4_NCFilter_RecoSmear_ana.root' % args.bDir, '%s/prodgenie_atmnu_min_dune10kt_gen_g4_NCFilter_RecoSmear_ana.root' % args.bDir ]
+  bFile = [ '%s/prodgenie_atmnu_max_dune10kt_gen_g4_NCFilter_reco_ana.root' % args.bDir, '%s/prodgenie_atmnu_min_dune10kt_gen_g4_NCFilter_reco_ana.root' % args.bDir ]
   hPDict['atmos'] = bookMomentumHistograms( MomentumVars, 0., 0. )
   hADict['atmos'] = bookAngularHistograms( AngularVars, 0., 0. )
   bTree = getTree( bFile, 'MCParticles' )
@@ -204,13 +205,13 @@ if __name__ == "__main__":
         continue
 
       E = Mass * Gamma
-      if E in [ 11., 22., 25., 44., 50. ]: Eround = int(E)
+      if E in [ 11., 15., 22., 25., 30., 44., 50., 60. ]: Eround = int(E)
       else: Eround = E
-      if E in [ 5.5, 6.25, 12.5 ]:
-        Estr = str(E)
-        Estr.replace( '.', 'p' )
-      else: Estr = str(Eround)
-      sFile = ['%s/dune_scalar_e%s_m%s_g1_z1.0_Gen_g4_RecoSmear_ana.root' %( args.sDir, Estr, str(Mass) ) ]
+      # if E in [ 5.5, 6.25, 12.5 ]:
+      #   Estr = str(E)
+      #   Estr.replace( '.', 'p' )
+      Estr = str(Eround)
+      sFile = ['%s/dune_scalar_e%s_m%s_g1_z1.0_Gen_g4_reco_ana.root' %( args.sDir, Estr, str(Mass) ) ]
       sKey = 'e%s_m%s' %( Eround, Mass )
       hPDict[sKey] = bookMomentumHistograms( MomentumVars, Mass, Gamma )
       hADict[sKey] = bookAngularHistograms( AngularVars, Mass, Gamma )
@@ -222,19 +223,3 @@ if __name__ == "__main__":
     for var in AngularVars:
       makeAngularPlot( hADict, Mass, Gammas, var, args.oDir )
 
-
-  # Output the selection efficiency
-  # txtName = '%s/Efficiency.txt' % args.oDir
-  # txtFile = open( txtName, 'w' )
-  # for sample in nTotal.keys():
-  #   n = nTotal[sample]
-  #   if sample in [ 'atmos' ]:
-  #     n = float( nTotal[sample] )/ 14.239
-  #   txtFile.write( 'Sample: %s, total events: %f\n' % ( sample, n ) )
-    
-  #   for var in AngularVars:
-  #     if var in ['InParticleAngle', 'OutParticleAngle']: continue
-  #     p = nPassed[sample][var]
-  #     if sample in [ 'atmos' ]:
-  #       p = float( nPassed[sample][var] )/ 14.239
-  #     txtFile.write( '   %s: %f (%f)\n' %( var, p, passRate[sample][var] ) )

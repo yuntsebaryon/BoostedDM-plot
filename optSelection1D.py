@@ -65,7 +65,7 @@ def selectEvents( tree, AngularVars, isSignal, costhl, costhh, ncosth ):
 def optimizeSelection( mass, gamma, AngularVars, bgScale, nPassed, rPassed ):
 
   E = mass * gamma
-  if E in [ 11., 22., 25., 44., 50. ]: Eround = int(E)
+  if E in [ 11., 15., 22., 25., 30., 44., 50., 60. ]: Eround = int(E)
   else: Eround = E
   sKey = 'e%s_m%s' %( Eround, mass )
   # Scale the background events to 40kton*10 year exposure
@@ -108,7 +108,7 @@ if __name__ == "__main__":
   args = parser.parse_args()
 
   Masses     = [ 5, 10, 20, 40 ]
-  Gammas     = [ 1.1, 1.25, 2, 10 ]
+  Gammas     = [ 1.1, 1.25, 1.5, 10 ]
   hDict      = {}
   nTotal     = {}
   nFiducial  = {}
@@ -143,7 +143,7 @@ if __name__ == "__main__":
         continue
       
       E = Mass * Gamma
-      if E in [ 11., 22., 25., 44., 50. ]: Eround = int(E)
+      if E in [ 11., 15., 22., 25., 30., 44., 50., 60. ]: Eround = int(E)
       else: Eround = E
       sFile = [ '%s/dune_scalar_e%s_m%s_g1_z1.0_Gen_g4_reco_ana.root' %( args.sDir, str(Eround), str(Mass) ) ]
       sKey = 'e%s_m%s' %( Eround, Mass )
