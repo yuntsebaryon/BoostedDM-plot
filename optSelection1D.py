@@ -76,16 +76,18 @@ def optimizeSelection( mass, gamma, AngularVars, bgScale, nPassed, rPassed ):
   
   for var in AngularVars:
     SprimeMin = 10000.
-    for costhetaCut in nPassed[sKey][var].keys():
+    for costhetaCut in sorted( nPassed[sKey][var].keys() ):
       sEff = rPassed[sKey][var][costhetaCut]
       bEvents = float(nPassed['atmos'][var][costhetaCut])*backgroundScale
       Sprime = 25./ (2.*sEff) + math.sqrt( 25.*bEvents/ (sEff*sEff) + 625./(4.*sEff*sEff) )
+      # print costhetaCut, sEff, bEvents, Sprime, SprimeMin
       if Sprime < SprimeMin:
         SprimeMin = Sprime
         bestCut[var] = costhetaCut
         bestEff[var] = sEff
         bestBkg[var] = bEvents
         bestBkgErr[var] = math.sqrt( float(nPassed['atmos'][var][costhetaCut]) )*backgroundScale
+      # print 'Best cut: %s, Sprime: %s' % ( bestCut[var], Sprime )
   
   return bestCut, bestEff, bestBkg, bestBkgErr
   
@@ -150,6 +152,7 @@ if __name__ == "__main__":
       sTree = getTree( sFile, 'MCParticles' )
       nTotal[sKey], nFiducial[sKey], nPassed[sKey], passRate[sKey] = selectEvents( sTree, AngularVars, True, costhl, costhh, ncosth )
       # optimize the selection
+      # print 'Mass: %d, Energy: %s' %( Mass, Eround )
       bestCut[sKey], bestEff[sKey], bestBkg[sKey], bestBkgErr[sKey] = optimizeSelection( Mass, Gamma, AngularVars, args.bgScale, nPassed, passRate )
       txtFile.write('Mass = %s GeV, E = %s GeV\n' % ( str(Mass), str(Eround) ) )
       
