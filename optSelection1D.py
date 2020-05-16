@@ -9,9 +9,9 @@ import numpy
 def createDir( odir ):
   if not os.path.exists( odir ):
     os.mkdir( odir )
-    print "   Creating the output directory %s " % odir
+    print('   Creating the output directory %s ' % odir )
   else:
-    print "   The output directory already exists"
+    print('   The output directory already exists' )
 # createDir()
 
 def getTree( fNames, tName ):
@@ -30,26 +30,26 @@ def selectEvents( tree, AngularVars, isSignal, costhl, costhh, ncosth ):
   nFiducial = 0
   nPassed = {}
   rPassed = {}
-  
+
   costhetaCuts = numpy.linspace( costhl, costhh, ncosth )
-  
+
   for var in AngularVars:
     nPassed[var] = {}
     rPassed[var] = {}
     for costhetaCut in costhetaCuts:
       nPassed[var][costhetaCut] = 0
       rPassed[var][costhetaCut] = 0
-  
+
   for i in tree:
     if i.isIn10kton == 0: continue
     nFiducial += 1
-    
+
     for var in AngularVars:
-      
+
       p = eval( 'i.%sP[0]' % var )
       leaf = eval( 'i.%sAngle[0]' % var )
       costheta = math.cos( leaf )
-      
+
       for costhetaCut in costhetaCuts:
         if p == 0. or costheta < costhetaCut: continue
         nPassed[var][costhetaCut] += 1
@@ -73,7 +73,7 @@ def optimizeSelection( mass, gamma, AngularVars, bgScale, nPassed, rPassed ):
   bestCut = {}
   bestEff = {}
   bestBkg = {}
-  
+
   for var in AngularVars:
     SprimeMin = 10000.
     for costhetaCut in sorted( nPassed[sKey][var].keys() ):
@@ -88,13 +88,45 @@ def optimizeSelection( mass, gamma, AngularVars, bgScale, nPassed, rPassed ):
         bestBkg[var] = bEvents
         bestBkgErr[var] = math.sqrt( float(nPassed['atmos'][var][costhetaCut]) )*backgroundScale
       # print 'Best cut: %s, Sprime: %s' % ( bestCut[var], Sprime )
-  
+
   return bestCut, bestEff, bestBkg, bestBkgErr
-  
+
 # def optimizeSelection()
 
+def optimizeSelectionFOM( mass, gamma, AngularVars, bgScale, nPassed, rPassed ):
+
+  E = mass * gamma
+  if E in [ 11., 15., 22., 25., 30., 44., 50., 60. ]: Eround = int(E)
+  else: Eround = E
+  sKey = 'e%s_m%s' %( Eround, mass )
+  # Scale the background events to 40kton*10 year exposure
+  backgroundScale = bgScale* 40./28.705
+  bestCut = {}
+  bestEff = {}
+  bestBkg = {}
+
+  for var in AngularVars:
+    FOMMax = 0.
+    for costhetaCut in sorted( nPassed[sKey][var].keys() ):
+      sEff = rPassed[sKey][var][costhetaCut]
+      bEvents = float(nPassed['atmos'][var][costhetaCut])*backgroundScale
+      FOM = sEff/math.sqrt(bEvents)
+      print( costhetaCut, sEff, bEvents, FOM, FOMMax )
+      if FOM > FOMMax:
+        FOMMax = FOM
+        bestCut[var] = costhetaCut
+        bestEff[var] = sEff
+        bestBkg[var] = bEvents
+        bestBkgErr[var] = math.sqrt( float(nPassed['atmos'][var][costhetaCut]) )*backgroundScale
+      print('Best cut: %s, FOM: %s' % ( bestCut[var], FOM ))
+
+  return bestCut, bestEff, bestBkg, bestBkgErr
+
+# def optimizeSelectionFOM()
+
+
 if __name__ == "__main__":
- 
+
   AngularVars = [ 'Visible', 'VisibleNoN', 'LeadingParticle', 'LeadingParticleNoN',
                   'SmearedReconstructable', 'SmearedReconstructableNoN',
                   'LeadingSmearedReconstructable', 'LeadingSmearedReconstructableNoN',
@@ -104,9 +136,9 @@ if __name__ == "__main__":
   parser.add_argument( '-s', dest = 'sDir', type = str, help = 'The directory of the input SIGNAL files.' )
   parser.add_argument( '-b', dest = 'bDir', type = str, help = 'The directory of the input BACKGROUND files.' )
   parser.add_argument( '-o', dest = 'oDir', type = str, help = 'The directory of the output plots.' )
-  parser.add_argument( '-m', dest = 'bgScale', type = float, default = 1., 
+  parser.add_argument( '-m', dest = 'bgScale', type = float, default = 1.,
                       help = 'The scale factor on the background events to account for additional background source.' )
-  
+
   args = parser.parse_args()
 
   Masses     = [ 5, 10, 20, 40 ]
@@ -126,11 +158,11 @@ if __name__ == "__main__":
 
   # Create the output directory
   createDir( args.oDir )
-  
+
   # Create the output text file
-  txtName = '%s/1D_Efficiency_scalar_bgScale%f.txt' % ( args.oDir, args.bgScale )
+  txtName = '%s/1DFOM_Efficiency_scalar_bgScale%f.txt' % ( args.oDir, args.bgScale )
   txtFile = open( txtName, 'w' )
-    
+
 
   # Background
   bFile = [ '%s/prodgenie_atmnu_max_dune10kt_gen_g4_NCFilter_reco_ana.root' % args.bDir, '%s/prodgenie_atmnu_min_dune10kt_gen_g4_NCFilter_reco_ana.root' % args.bDir ]
@@ -140,10 +172,10 @@ if __name__ == "__main__":
   # Signal
   for Mass in Masses:
     for Gamma in Gammas:
-      
+
       if Mass in [ 5, 20, 40 ] and ( Gamma == 2 ):
         continue
-      
+
       E = Mass * Gamma
       if E in [ 11., 15., 22., 25., 30., 44., 50., 60. ]: Eround = int(E)
       else: Eround = E
@@ -153,8 +185,8 @@ if __name__ == "__main__":
       nTotal[sKey], nFiducial[sKey], nPassed[sKey], passRate[sKey] = selectEvents( sTree, AngularVars, True, costhl, costhh, ncosth )
       # optimize the selection
       # print 'Mass: %d, Energy: %s' %( Mass, Eround )
-      bestCut[sKey], bestEff[sKey], bestBkg[sKey], bestBkgErr[sKey] = optimizeSelection( Mass, Gamma, AngularVars, args.bgScale, nPassed, passRate )
+      bestCut[sKey], bestEff[sKey], bestBkg[sKey], bestBkgErr[sKey] = optimizeSelectionFOM( Mass, Gamma, AngularVars, args.bgScale, nPassed, passRate )
       txtFile.write('Mass = %s GeV, E = %s GeV\n' % ( str(Mass), str(Eround) ) )
-      
+
       for var in AngularVars:
         txtFile.write( '  %s: optimal cut at %f, signal efficieny = %f, background counts = %f, background uncertainty =  %f\n' %( var, bestCut[sKey][var], bestEff[sKey][var], bestBkg[sKey][var], bestBkgErr[sKey][var] ) )
